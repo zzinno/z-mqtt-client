@@ -54,6 +54,7 @@ func (z *ZClient) New(c Config) error {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
+	z.client = client
 	return nil
 }
 func (z *ZClient) onConnect(_ mqtt.Client) {
