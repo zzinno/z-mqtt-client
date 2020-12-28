@@ -41,7 +41,7 @@ func (z *ZClient) New(c Config) error {
 	z.messageHandler = z.deal
 	z.topic = c.SelfTopic
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", c.Broker, c.port))
+	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", c.Broker, c.Port))
 	opts.SetClientID(c.ClientID)
 	opts.SetUsername(c.Username)
 	opts.SetPassword(c.Password)
