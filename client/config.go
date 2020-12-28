@@ -8,7 +8,7 @@ import "github.com/zzinno/z-mqtt-client/logger"
 //
 type Config struct {
 	Broker    string
-	port      int
+	Port      int
 	ClientID  string
 	Username  string
 	Password  string
