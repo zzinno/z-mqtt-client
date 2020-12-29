@@ -15,14 +15,14 @@ type Logger interface {
 type ZMqttLogger struct{}
 
 func (l ZMqttLogger) Info(args ...interface{}) {
-	l.log("INFO", args)
+	l.log("[INFO]", args)
 }
 func (l ZMqttLogger) Error(args ...interface{}) {
-	l.log("ERROR", args)
+	l.log("[ERROR]", args)
 }
 func (l ZMqttLogger) Warning(args ...interface{}) {
-	l.log("WARN", args)
+	l.log("[WARN]", args)
 }
 func (l ZMqttLogger) log(T string, args ...interface{}) {
-	log.Println(args)
+	log.Println(T, args)
 }
