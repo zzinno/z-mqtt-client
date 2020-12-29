@@ -15,8 +15,9 @@ func main() {
 		Password:  "123123",
 		SelfTopic: "testCli",
 		CallBack: func(msg *client.RequestMsg) (*[]byte, error) {
-			fmt.Println(msg.FromTopic)
-			return nil, nil
+			fmt.Println(msg.MsgId)
+			a := []byte("3333")
+			return &a, nil
 		},
 		Logger: nil,
 	})

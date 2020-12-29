@@ -32,7 +32,7 @@ type ZClient struct {
 
 // 使用时只要传入config就行
 func (z *ZClient) New(c Config) error {
-	if c.Logger == nil {
+	if z.Logger == nil {
 		z.Logger = new(logger.ZMqttLogger)
 	}
 	z.CallBack = c.CallBack
@@ -50,11 +50,11 @@ func (z *ZClient) New(c Config) error {
 	opts.OnConnectionLost = z.connectLostHandler
 	opts.AutoReconnect = true
 	opts.WillQos = 2
-	client := mqtt.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
+	z.client = mqtt.NewClient(opts)
+	if token := z.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	z.client = client
+	z.sub(c.SelfTopic)
 	return nil
 }
 func (z *ZClient) onConnect(_ mqtt.Client) {
@@ -66,7 +66,6 @@ func (z *ZClient) onConnectLost(_ mqtt.Client, err error) {
 }
 
 func (z *ZClient) deal(_ mqtt.Client, msg mqtt.Message) {
-	go z.Logger.Info("Received message:", msg.Payload(), "from topic:", msg.Topic())
 	// 此处处理收到的所有消息
 	buf := new(ZMsg)
 	err := msgpack.Unmarshal(msg.Payload(), buf)
@@ -74,6 +73,7 @@ func (z *ZClient) deal(_ mqtt.Client, msg mqtt.Message) {
 	switch buf.MsgType {
 	case 0:
 		z.dealRequest(&buf.MsgContent)
+
 	case 1:
 		z.dealResponse(&buf.MsgContent)
 	default:
@@ -85,6 +85,7 @@ func (z *ZClient) dealRequest(request *[]byte) {
 	req := new(RequestMsg)
 	err := msgpack.Unmarshal(*request, req)
 	z.checkErr(err)
+	go z.Logger.Info("Received Request:", string(req.Data.Key), "from topic:", req.FromTopic)
 	res := new(RespondMsg)
 	res.RequestMsg = *req
 	// 如果没有读取到
@@ -109,9 +110,17 @@ func (z *ZClient) dealRequest(request *[]byte) {
 }
 
 func (z *ZClient) dealResponse(response *[]byte) {
-	req := new(RespondMsg)
-	err := msgpack.Unmarshal(*response, req)
+	res := new(RespondMsg)
+	err := msgpack.Unmarshal(*response, res)
 	z.checkErr(err)
+	go z.Logger.Info("Received Response:", string(res.Data))
+	c, success := z.msgMap.LoadAndDelete(res.RequestMsg.MsgId)
+	if success != true {
+		z.Logger.Error("SyncMap Action Error")
+	} else {
+		ch := c.(*chan RespondMsg)
+		*ch <- *res
+	}
 
 }
 
@@ -131,19 +140,23 @@ func (z *ZClient) SendMsgAndWaitReply(data Data, topic string, waitTime int) (Re
 	ch := make(chan RespondMsg, 1)
 	timeOut := make(chan bool, 1)
 	z.msgMap.Store(id, &ch)
+	complete := false
 	defer func() {
 		z.msgMap.Delete(id)
 		close(ch)
 		close(timeOut)
 	}()
 
-	go func() {
+	go func(c *bool, tc *chan bool) {
 		time.Sleep(time.Duration(waitTime) * time.Second) // 等待n秒钟
-		timeOut <- true
-	}()
+		if complete == false {
+			timeOut <- true
+		}
+	}(&complete, &timeOut)
 	select {
 	case m := <-ch:
 		{
+			complete = true
 			return m, nil
 		}
 	case <-timeOut:

@@ -4,7 +4,6 @@
 package client
 
 import (
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -17,8 +16,8 @@ func (z *ZClient) pub(topic string, msg ZMsg) {
 	}
 }
 
-func (z *ZClient) sub(topic string, client mqtt.Client) {
-	token := client.Subscribe(topic, 1, nil)
+func (z *ZClient) sub(topic string) {
+	token := z.client.Subscribe(topic, 1, nil)
 	token.Wait()
 	if token.Error() != nil {
 		z.Logger.Error("Subscribe error:", token.Error())
