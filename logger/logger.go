@@ -5,7 +5,6 @@ package logger
 
 import (
 	"log"
-	"time"
 )
 
 type Logger interface {
@@ -25,6 +24,5 @@ func (l ZMqttLogger) Warning(args ...interface{}) {
 	l.log("WARN", args)
 }
 func (l ZMqttLogger) log(T string, args ...interface{}) {
-	currentTime := time.Now()
-	log.Println(currentTime, "["+T+"]", args)
+	log.Println(args)
 }
